@@ -240,3 +240,12 @@ LOGGING = {
         },
     },
 }
+
+# OpenAI Configuration
+OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
+OPENAI_MODEL = config('OPENAI_MODEL', default='gpt-3.5-turbo')
+OPENAI_MAX_TOKENS = config('OPENAI_MAX_TOKENS', default=1500, cast=int)
+
+# Configuración de Recomendaciones IA
+RECOMENDACIONES_IA_ENABLED = config('RECOMENDACIONES_IA_ENABLED', default=True, cast=bool)
+RECOMENDACIONES_MAX_POR_USUARIO = config('RECOMENDACIONES_MAX_POR_USUARIO', default=10, cast=int)

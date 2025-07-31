@@ -2,6 +2,7 @@
 Views para la aplicación de Cajones Inteligentes.
 Implementa principios SOLID y Clean Architecture.
 """
+import logging
 from datetime import timedelta
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -24,6 +25,9 @@ from .serializers import (
     HistorialSerializer, RecomendacionSerializer,
     EstadisticasSerializer, TipoObjetoSerializer, TamanioSerializer
 )
+from .services import RecomendacionService
+
+logger = logging.getLogger(__name__)
 
 
 @extend_schema_view(
@@ -435,6 +439,54 @@ class RecomendacionViewSet(BaseViewSet):
         recomendaciones = self.get_queryset().filter(implementada=False)
         serializer = self.get_serializer(recomendaciones, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'])
+    def generar_automaticas(self, request):
+        """
+        Generar recomendaciones automáticas usando LLM para el usuario autenticado.
+        Analiza todos los cajones y objetos del usuario para generar sugerencias inteligentes.
+        """
+        try:
+            # Obtener el ID del usuario desde los parámetros o usar el usuario autenticado
+            usuario_id = request.data.get('usuario_id', request.user.id)
+            
+            # Verificar que el usuario tiene permisos para generar recomendaciones para ese ID
+            if usuario_id != request.user.id and not request.user.is_staff:
+                return Response(
+                    {'error': 'No tienes permisos para generar recomendaciones para otro usuario'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Instanciar el servicio de recomendaciones
+            servicio = RecomendacionService()
+            
+            # Generar recomendaciones
+            resultado = servicio.generar_recomendaciones_usuario(usuario_id)
+            
+            if 'error' in resultado:
+                return Response(resultado, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Obtener las recomendaciones recién creadas
+            recomendaciones_nuevas = Recomendacion.objects.filter(
+                usuario_id=usuario_id,
+                is_active=True
+            ).order_by('-created_at')[:len(resultado.get('recomendaciones', []))]
+            
+            # Serializar las recomendaciones
+            serializer = self.get_serializer(recomendaciones_nuevas, many=True)
+            
+            # Agregar información adicional al resultado
+            resultado['recomendaciones_guardadas'] = serializer.data
+            resultado['total_recomendaciones_generadas'] = len(serializer.data)
+            
+            return Response(resultado, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error en generar_automaticas: {str(e)}")
+            return Response(
+                {'error': f'Error interno del servidor: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class EstadisticasViewSet(viewsets.ViewSet):

@@ -17,3 +17,6 @@ pytz==2025.1
 
 # Logging
 structlog==24.4.0
+
+# AI y LLM
+openai==1.54.4
