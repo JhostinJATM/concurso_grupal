@@ -16,7 +16,7 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Token ${token}`;
     }
     return config;
   },
@@ -34,7 +34,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expirado o no válido
       localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      localStorage.removeItem('user');
+      // Solo redirigir si no estamos ya en la página de login
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

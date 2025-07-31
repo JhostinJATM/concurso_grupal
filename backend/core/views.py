@@ -5,8 +5,12 @@ Implementa principios SOLID y patrones de diseño.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from .serializers import DetailSerializer
@@ -116,3 +120,118 @@ class ReadOnlyBaseViewSet(viewsets.ReadOnlyModelViewSet):
         if hasattr(self.queryset.model, 'is_active'):
             queryset = queryset.filter(is_active=True)
         return queryset
+
+
+class CustomAuthToken(ObtainAuthToken):
+    """
+    Vista personalizada para autenticación por token.
+    Extiende ObtainAuthToken para retornar información adicional del usuario.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data,
+                                           context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'user': {
+                'id': user.pk,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+            }
+        })
+
+
+class LogoutView(APIView):
+    """
+    Vista para cerrar sesión y eliminar el token.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            # Eliminar el token del usuario actual
+            request.user.auth_token.delete()
+            return Response({'detail': 'Sesión cerrada exitosamente'}, status=status.HTTP_200_OK)
+        except:
+            return Response({'detail': 'Error al cerrar sesión'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserProfileView(APIView):
+    """
+    Vista para obtener la información del usuario autenticado.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            'id': user.pk,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'date_joined': user.date_joined,
+        })
+
+
+class RegisterView(APIView):
+    """
+    Vista para registrar nuevos usuarios.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        email = request.data.get('email', '')
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+
+        # Validaciones básicas
+        if not username or not password:
+            return Response(
+                {'detail': 'Usuario y contraseña son requeridos'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {'detail': 'El nombre de usuario ya existe'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Crear el usuario
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=email,
+                first_name=first_name,
+                last_name=last_name
+            )
+            
+            # Crear el token
+            token, created = Token.objects.get_or_create(user=user)
+            
+            return Response({
+                'token': token.key,
+                'user': {
+                    'id': user.pk,
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {'detail': 'Error al crear el usuario'},
+                status=status.HTTP_400_BAD_REQUEST
+            )

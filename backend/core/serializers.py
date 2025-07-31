@@ -31,20 +31,28 @@ class BaseModelSerializer(serializers.ModelSerializer):
         Override create para manejar lógica de negocio común.
         """
         request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            validated_data['user'] = request.user
+        user = None
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            user = request.user
         
-        return super().create(validated_data)
+        instance = self.Meta.model(**validated_data)
+        instance.save(user=user)
+        return instance
 
     def update(self, instance, validated_data):
         """
         Override update para manejar lógica de negocio común.
         """
         request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            validated_data['user'] = request.user
+        user = None
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            user = request.user
         
-        return super().update(instance, validated_data)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save(user=user)
+        return instance
 
 
 class AuditableModelSerializer(BaseModelSerializer):

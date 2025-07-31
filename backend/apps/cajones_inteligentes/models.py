@@ -42,8 +42,8 @@ class Cajon(AuditableModel):
         unique=True,
         help_text="Nombre único del cajón",
         validators=[RegexValidator(
-            regex=r'^[a-zA-Z0-9\s]+$',
-            message='Solo se permiten letras, números y espacios'
+            regex=r'^[\w\s\u00C0-\u017F]+$',
+            message='Solo se permiten letras, números, espacios y caracteres con tildes'
         )]
     )
     

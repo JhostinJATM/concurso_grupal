@@ -23,12 +23,10 @@ urlpatterns = [
     # API REST
     path('api/v1/', include(api_router.urls)),
     path('api/v1/', include('cajones_inteligentes.urls')),
+    path('api/v1/', include('core.urls')),
     
     # Autenticación DRF
     path('api-auth/', include('rest_framework.urls')),
-    
-    # Health check
-    path('health/', include('core.urls')),
     
     # Documentación de la API con drf-spectacular
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

@@ -44,7 +44,7 @@ class CajonSerializer(AuditableModelSerializer):
             'esta_lleno', 'porcentaje_uso'
         ]
         read_only_fields = AuditableModelSerializer.Meta.fields + [
-            'objetos_count', 'capacidad_disponible', 'esta_lleno', 'porcentaje_uso'
+            'usuario', 'objetos_count', 'capacidad_disponible', 'esta_lleno', 'porcentaje_uso'
         ]
     
     def validate_capacidad_maxima(self, value):
@@ -60,6 +60,18 @@ class CajonSerializer(AuditableModelSerializer):
         if len(value.strip()) < 2:
             raise serializers.ValidationError("El nombre debe tener al menos 2 caracteres")
         return value.strip()
+    
+    def create(self, validated_data):
+        """Override create para manejar el usuario correctamente."""
+        request = self.context.get('request')
+        user = None
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            user = request.user
+        
+        # El usuario se pasará en el save() como parámetro adicional
+        cajon = Cajon(**validated_data)
+        cajon.save(user=user)
+        return cajon
 
 
 class CajonListSerializer(serializers.ModelSerializer):
@@ -103,8 +115,17 @@ class ObjetoSerializer(AuditableModelSerializer):
         """Validación completa del objeto."""
         attrs = super().validate(attrs)
         
-        # Validar que el cajón no esté lleno (solo si se proporciona un cajón)
+        # Validar que el cajón pertenezca al usuario actual
         cajon = attrs.get('cajon')
+        if cajon:
+            request = self.context.get('request')
+            if request and hasattr(request, 'user'):
+                if cajon.usuario != request.user:
+                    raise serializers.ValidationError({
+                        'cajon': 'No puedes asignar objetos a cajones que no te pertenecen'
+                    })
+        
+        # Validar que el cajón no esté lleno (solo si se proporciona un cajón)
         if cajon and cajon.esta_lleno:
             # Si estamos actualizando, verificar si es el mismo objeto
             if not self.instance or self.instance.cajon != cajon:
@@ -132,7 +153,7 @@ class ObjetoListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Objeto
         fields = [
-            'id', 'nombre', 'codigo', 'tipo_objeto', 'tipo_objeto_display',
+            'id', 'nombre', 'tipo_objeto', 'tipo_objeto_display',
             'tamanio', 'tamanio_display', 'cajon_nombre', 'fecha_ingreso'
         ]
 

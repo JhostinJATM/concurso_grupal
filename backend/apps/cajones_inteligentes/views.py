@@ -89,7 +89,7 @@ class CajonViewSet(BaseViewSet):
 
     def perform_create(self, serializer):
         """Asignar usuario actual al crear cajón."""
-        cajon = serializer.save(usuario=self.request.user, user=self.request.user)
+        cajon = serializer.save(usuario=self.request.user)
         
         # Crear entrada en historial
         Historial.objects.create(
@@ -105,7 +105,7 @@ class CajonViewSet(BaseViewSet):
         instance = serializer.instance
         old_name = instance.nombre
         
-        cajon = serializer.save(user=self.request.user)
+        cajon = serializer.save()
         
         # Crear entrada en historial
         Historial.objects.create(
@@ -190,12 +190,12 @@ class ObjetoViewSet(BaseViewSet):
     def perform_create(self, serializer):
         """Crear objeto y registrar en historial."""
         with transaction.atomic():
-            objeto = serializer.save(user=self.request.user)
+            objeto = serializer.save()
             
             # Crear entrada en historial
             Historial.objects.create(
                 nombre=f"Objeto creado: {objeto.nombre}",
-                motivo=f"Se agregó el objeto '{objeto.nombre}' al cajón '{objeto.cajon.nombre}'",
+                motivo=f"Se agregó el objeto '{objeto.nombre}' al cajón '{objeto.cajon.nombre if objeto.cajon else 'Sin asignar'}'",
                 usuario=self.request.user,
                 objeto=objeto,
                 cajon=objeto.cajon,
@@ -209,11 +209,11 @@ class ObjetoViewSet(BaseViewSet):
         old_cajon = instance.cajon
         
         with transaction.atomic():
-            objeto = serializer.save(user=self.request.user)
+            objeto = serializer.save()
             
             # Determinar tipo de cambio
             if old_cajon != objeto.cajon:
-                motivo = f"Se movió el objeto '{old_name}' de '{old_cajon.nombre}' a '{objeto.cajon.nombre}'"
+                motivo = f"Se movió el objeto '{old_name}' de '{old_cajon.nombre if old_cajon else 'Sin asignar'}' a '{objeto.cajon.nombre if objeto.cajon else 'Sin asignar'}'"
                 tipo_accion = 'MOVER'
             else:
                 motivo = f"Se modificó el objeto '{old_name}' -> '{objeto.nombre}'"
@@ -239,7 +239,7 @@ class ObjetoViewSet(BaseViewSet):
         serializer.is_valid(raise_exception=True)
         
         with transaction.atomic():
-            objeto = Objeto.nuevo_objeto(**serializer.validated_data, user=request.user)
+            objeto = Objeto.nuevo_objeto(**serializer.validated_data)
             
             # Crear entrada en historial
             Historial.objects.create(

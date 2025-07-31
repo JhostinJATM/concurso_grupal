@@ -32,6 +32,20 @@ export const authService = {
   async register(userData) {
     try {
       const response = await api.post('/auth/register/', userData);
+      if (response.data.token) {
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  // Obtener perfil del usuario
+  async getProfile() {
+    try {
+      const response = await api.get('/auth/profile/');
       return response.data;
     } catch (error) {
       throw this.handleError(error);

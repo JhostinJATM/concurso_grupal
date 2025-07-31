@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Cajones</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input, textarea { width: 100%; padding: 8px; margin: 5px 0; }
+        .result { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 3px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        select { width: 100%; padding: 8px; margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Test API Sistema de Cajones</h1>
+    
+    <!-- Login -->
+    <div class="container">
+        <h2>1. Autenticación</h2>
+        <input type="text" id="username" placeholder="Usuario" value="test_user">
+        <input type="password" id="password" placeholder="Contraseña" value="test123456">
+        <button onclick="login()">Iniciar Sesión</button>
+        <div id="authResult" class="result"></div>
+    </div>
+
+    <!-- Crear Cajón -->
+    <div class="container">
+        <h2>2. Crear Cajón</h2>
+        <input type="text" id="cajonNombre" placeholder="Nombre del cajón" value="Mi Cajón Test">
+        <input type="number" id="cajonCapacidad" placeholder="Capacidad máxima" value="20" min="1" max="1000">
+        <textarea id="cajonDescripcion" placeholder="Descripción del cajón">Un cajón de prueba creado desde HTML</textarea>
+        <button onclick="crearCajon()">Crear Cajón</button>
+        <div id="cajonResult" class="result"></div>
+    </div>
+
+    <!-- Listar Cajones -->
+    <div class="container">
+        <h2>3. Listar Cajones</h2>
+        <button onclick="listarCajones()">Cargar Cajones</button>
+        <div id="cajonesResult" class="result"></div>
+        <select id="cajonSelect">
+            <option value="">Selecciona un cajón...</option>
+        </select>
+    </div>
+
+    <!-- Crear Objeto -->
+    <div class="container">
+        <h2>4. Crear Objeto</h2>
+        <input type="text" id="objetoNombre" placeholder="Nombre del objeto" value="Mi Objeto Test">
+        <select id="objetoTipo">
+            <option value="ROPA">Ropa</option>
+            <option value="PAPELERIA">Papelería</option>
+            <option value="CABLES">Cables</option>
+            <option value="ELECTRONICA">Electrónica</option>
+            <option value="LIBROS">Libros</option>
+            <option value="HERRAMIENTAS">Herramientas</option>
+            <option value="COCINA">Artículos de Cocina</option>
+            <option value="OTROS" selected>Otros</option>
+        </select>
+        <select id="objetoTamanio">
+            <option value="PEQUENO">Pequeño</option>
+            <option value="MEDIANO" selected>Mediano</option>
+            <option value="GRANDE">Grande</option>
+        </select>
+        <textarea id="objetoDescripcion" placeholder="Descripción del objeto">Un objeto de prueba creado desde HTML</textarea>
+        <button onclick="crearObjeto()">Crear Objeto</button>
+        <div id="objetoResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1';
+        let authToken = '';
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    document.getElementById('authResult').className = 'result success';
+                    document.getElementById('authResult').innerHTML = `
+                        <strong>✅ Login exitoso!</strong><br>
+                        Usuario: ${data.user.username}<br>
+                        Token: ${authToken.substring(0, 20)}...
+                    `;
+                } else {
+                    throw new Error(data.detail || 'Error en login');
+                }
+            } catch (error) {
+                document.getElementById('authResult').className = 'result error';
+                document.getElementById('authResult').textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function crearCajon() {
+            if (!authToken) {
+                alert('Primero debes iniciar sesión');
+                return;
+            }
+
+            const nombre = document.getElementById('cajonNombre').value;
+            const capacidad_maxima = parseInt(document.getElementById('cajonCapacidad').value);
+            const descripcion = document.getElementById('cajonDescripcion').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/cajones/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${authToken}`
+                    },
+                    body: JSON.stringify({ nombre, capacidad_maxima, descripcion })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('cajonResult').className = 'result success';
+                    document.getElementById('cajonResult').innerHTML = `
+                        <strong>✅ Cajón creado exitosamente!</strong><br>
+                        ID: ${data.id}<br>
+                        Nombre: ${data.nombre}<br>
+                        Capacidad: ${data.capacidad_maxima}<br>
+                        Disponible: ${data.capacidad_disponible}
+                    `;
+                    // Actualizar lista de cajones
+                    listarCajones();
+                } else {
+                    throw new Error(JSON.stringify(data));
+                }
+            } catch (error) {
+                document.getElementById('cajonResult').className = 'result error';
+                document.getElementById('cajonResult').textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function listarCajones() {
+            if (!authToken) {
+                alert('Primero debes iniciar sesión');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/cajones/`, {
+                    headers: {
+                        'Authorization': `Token ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('cajonesResult').className = 'result success';
+                    document.getElementById('cajonesResult').innerHTML = `
+                        <strong>✅ Cajones cargados: ${data.count}</strong><br>
+                        ${data.results.map(cajon => `
+                            • ${cajon.nombre} (${cajon.objetos_count}/${cajon.capacidad_maxima} objetos)
+                        `).join('<br>')}
+                    `;
+                    
+                    // Llenar select de cajones
+                    const select = document.getElementById('cajonSelect');
+                    select.innerHTML = '<option value="">Selecciona un cajón...</option>';
+                    data.results.forEach(cajon => {
+                        const option = document.createElement('option');
+                        option.value = cajon.id;
+                        option.textContent = `${cajon.nombre} (${cajon.objetos_count}/${cajon.capacidad_maxima})`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    throw new Error(JSON.stringify(data));
+                }
+            } catch (error) {
+                document.getElementById('cajonesResult').className = 'result error';
+                document.getElementById('cajonesResult').textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function crearObjeto() {
+            if (!authToken) {
+                alert('Primero debes iniciar sesión');
+                return;
+            }
+
+            const cajonId = document.getElementById('cajonSelect').value;
+            if (!cajonId) {
+                alert('Primero debes seleccionar un cajón');
+                return;
+            }
+
+            const nombre = document.getElementById('objetoNombre').value;
+            const tipo_objeto = document.getElementById('objetoTipo').value;
+            const tamanio = document.getElementById('objetoTamanio').value;
+            const descripcion = document.getElementById('objetoDescripcion').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/objetos/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${authToken}`
+                    },
+                    body: JSON.stringify({ 
+                        nombre, 
+                        tipo_objeto, 
+                        tamanio, 
+                        cajon: cajonId, 
+                        descripcion 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('objetoResult').className = 'result success';
+                    document.getElementById('objetoResult').innerHTML = `
+                        <strong>✅ Objeto creado exitosamente!</strong><br>
+                        ID: ${data.id}<br>
+                        Nombre: ${data.nombre}<br>
+                        Tipo: ${data.tipo_objeto_display}<br>
+                        Tamaño: ${data.tamanio_display}<br>
+                        Cajón: ${data.cajon_info.nombre}
+                    `;
+                    // Actualizar lista de cajones para ver el nuevo conteo
+                    listarCajones();
+                } else {
+                    throw new Error(JSON.stringify(data));
+                }
+            } catch (error) {
+                document.getElementById('objetoResult').className = 'result error';
+                document.getElementById('objetoResult').textContent = `❌ Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
