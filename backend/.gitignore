@@ -1,0 +1,79 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Archivos de configuración del entorno
+*.env
+*.env.*
+!.env.example
+
+# Archivos del editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de log
+*.log
+logs/*.log
+
+# Archivos de base de datos
+*.sqlite3
+
+# Archivos de migraciones (opcional si quieres excluir los pyc)
+**/migrations/*.pyc
+**/migrations/__pycache__/
+
+# Archivos de compilación de frontend (si usas npm o similares)
+node_modules/
+dist/
+build/
+
+# Archivos generados por Django
+staticfiles/
+static_collected/
+media/
+
+# Compilación de Sass/CSS (opcional)
+*.css.map
+
+# Archivos de coverage / testing
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.tox/
+.nox/
+.pytest_cache/
+nosetests.xml
+testdb.sqlite3
+
+# Archivos de documentación generada
+_build/
+docs/_build/
+
+# Configuración de herramientas como MyPy, Pyright
+.mypy_cache/
+.pyre/
+.pytype/
+
+# Archivos específicos del proyecto Smart Drawers
+local_settings.py
+celerybeat-schedule
+*.pid
+
+# Archivos de backup
+*.bak
+*.backup

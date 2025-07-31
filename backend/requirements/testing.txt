@@ -1,0 +1,16 @@
+# Dependencias para testing
+-r base.txt
+
+# Testing frameworks
+pytest==8.3.3
+pytest-django==4.9.0
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+pytest-xdist==3.6.0
+
+# Test data
+factory-boy==3.3.1
+Faker==33.1.0
+
+# Coverage
+coverage==7.6.9
